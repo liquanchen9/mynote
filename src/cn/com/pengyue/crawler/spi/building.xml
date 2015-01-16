@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bindings
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns="http://java.sun.com/xml/ns/jaxws">
+   <!-- 
+    <enableWrapperStyle>false</enableWrapperStyle> -->
+  <!--    <enableAsyncMapping>false</enableAsyncMapping> -->
+  
+    <bindings node="wsdl:definitions/wsdl:types/xsd:schema">
+        <jaxb:globalBindings>
+            <jaxb:javaType name="java.util.Date" xmlType="xsd:date"
+              parseMethod="calendar2Date(javax.xml.bind.DatatypeConverter.parseDate(value)));}private Date calendar2Date(java.util.Calendar c){Date value = c.getTime();return ("
+              printMethod="javax.xml.bind.DatatypeConverter.printDate(date2Calendar(value)));}private java.util.Calendar date2Calendar(Date date){java.util.Calendar value = java.util.Calendar.getInstance();value.setTime(date);return ("/>
+            <jaxb:javaType name="java.util.Date" xmlType="xsd:dateTime"
+              parseMethod="calendar2Date(javax.xml.bind.DatatypeConverter.parseDateTime(value)));}private Date calendar2Date(java.util.Calendar c){Date value = c.getTime();return ("
+              printMethod="javax.xml.bind.DatatypeConverter.printDateTime(date2Calendar(value)));}private java.util.Calendar date2Calendar(Date date){java.util.Calendar value = java.util.Calendar.getInstance();value.setTime(date);return ("/>
+        </jaxb:globalBindings>
+    </bindings>
+    <!-- 
+    <bindings node="wsdl:definitions" xmlns:jws="http://java.sun.com/xml/ns/javaee">
+        <jws:handler-chains>
+            <jws:handler-chain>
+                <jws:handler>
+                    <jws:handler-class>fromwsdlhandler.common.LoggingHandler</jws:handler-class>
+                </jws:handler>
+            </jws:handler-chain>
+        </jws:handler-chains>
+    </bindings>
+   -->
+</bindings>

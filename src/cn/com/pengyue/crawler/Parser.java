@@ -1,12 +1,19 @@
 package cn.com.pengyue.crawler;
 
-import java.util.Date;
+import java.util.List;
+
+import cn.com.pengyue.vo.PageInfo;
+import cn.com.pengyue.vo.ws.Page;
+import cn.com.pengyue.vo.ws.Rule;
 
 //解析器
-public interface Parser {
+public interface Parser { 
 	//URL--> HOST+parameter 决定如何处理日期格式
-	Object parse(String html);
+	List<Page> parse(String html,Rule rule,PageInfo pageInfo);
+
 	
-	//URL--> HOST+parameter 决定如何处理解析 是解析列表还是解析正文
-	Date parseDate(String dateStr);
+	void init(String type,ResourceGetter resourceGetter);
+
+
+	String parseContent(String htmlCode);
 }

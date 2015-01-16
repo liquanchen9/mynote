@@ -19,13 +19,13 @@
 				有时需要采集器得到点东西
 				Format（基本+关键字+可能有的信息）
 			} 
+			
+			(解析器){
+				URL--> HOST+parameter 决定如何处理解析 是解析列表还是解析正文
+				URL--> HOST+parameter 决定如何处理日期格式
+			}
 	}
 		
-	(解析器){
-			URL--> HOST+parameter 决定如何处理解析 是解析列表还是解析正文
-			URL--> HOST+parameter 决定如何处理日期格式
-	}
-	
 	(数据处理器){
 			结果结构
 			结果存储
