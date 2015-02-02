@@ -1,0 +1,77 @@
+		#rule = #params.rule,
+		#pageInfo = #params.pageInfo,
+		#searchengineConfig = #params.searchengineConfig,
+		
+		#sysProps = @java.lang.System@getProperties(),
+		#sysProps.setProperty("http.proxyHost", #searchengineConfig.proxyIp),
+		#sysProps.setProperty("http.proxyPort", #searchengineConfig.proxyPort+''),
+		#sysProps.setProperty("http.nonProxyHosts", 'localhost'),
+		
+		#dataServiceWsdlUrl = #params.wsdl,
+		#dataService = new cn.com.pengyue.vo.ws.WebService_Service(new java.net.URL(#dataServiceWsdlUrl),new javax.xml.namespace.QName("http://www.pengyue.com.cn/","WebService")).webServicePort,
+		
+		#searchUrl='http://www.aptn.com/80256FE40039EB88/search?openagent&query='+@java.net.URLEncoder@encode(#rule.enRuleInclude.trim(),'utf-8'),  
+ 		
+ 		#doc = @org.jsoup.Jsoup@connect(#searchUrl).maxBodySize(0).timeout(#config.onceTimeOut).get(),
+		
+		#dateFormat = new java.text.SimpleDateFormat("(dd MMM yyyy)",@java.util.Locale@US),
+		#dateRangPattern1 = @java.util.regex.Pattern@compile("to\\s+\\d+\\s+"),
+		#dateRangPattern2 = @java.util.regex.Pattern@compile("^\\(\\d+\\s+[a-zA-Z]+\\s+\\d+\\s+to\\s+\\d+\\s+[a-zA-Z]+\\s+\\d+\\)$"),
+		#dateRangPattern3 = @java.util.regex.Pattern@compile("^\\(\\d+\\s+[a-zA-Z]+\\s+to\\s+\\d+\\s+[a-zA-Z]+\\s+\\d+\\)$"),
+		#eles = #doc.select('.search_section .search_item a'),
+		#ranking=0,
+		#forPageInfo=new cn.com.pengyue.vo.PageInfo(),
+		#forPageInfo.pageSize=64,
+		#forPageInfo.totalSize=#eles.size(),
+		#results = new java.util.ArrayList(#forPageInfo.totalSize),
+		#forPageInfo.pageNo=1,
+		#forEles = :[ 
+				#this < #forPageInfo.endNo ? (
+					#ele=#eles.get(#this),
+					#page= new cn.com.pengyue.vo.ws.Page(),
+					#dateEle=#ele.select('.search_date'),
+					(#dateEle.size()>0?(
+						#dateEle=#dateEle.get(0),
+						#dateStr = #dateEle.text(),
+						#dateRangPattern3Matcher = #dateRangPattern3.matcher(#dateStr),
+						#dateStr = #dateRangPattern3Matcher.find()?(
+										#dateStr.replaceFirst("\\s+to\\s+\\d+\\s+[a-zA-Z]+","")
+									):(#dateRangPattern2Matcher = #dateRangPattern2.matcher(#dateStr),
+										#dateRangPattern2Matcher.find() ?(
+											#dateStr.replaceFirst("\\s+to\\s+\\d+\\s+[a-zA-Z]+\\s+\\d+\\)$",")")
+										):(
+											#dateRangPattern1Matcher = #dateRangPattern1.matcher(#dateStr),
+											#dateRangPattern1Matcher.find()? #dateRangPattern1Matcher.replaceFirst(""):#dateStr
+										)
+									),
+						#dateEle.remove(),
+						#page.infoPushDate=#dateFormat.parse(#dateStr))
+						:(#page.infoPushDate=new java.util.Date())
+					),
+					#page.title=#ele.text(),
+					#page.contentDesc=#ele.text(),
+					#page.url=#ele.attr('href'),
+					#page.url=#page.url.startsWith('/')?("http://www.aptn.com"+#page.url):(#page.url),
+					#page.rule=#rule.rule,
+					#page.ruleId=#rule.id,
+					#page.searchengineId=#searchengineConfig.id,
+					#page.domainName='美联社',
+					#page.domain='www.aptn.com',
+					#dataService.savePage(#page),
+					#results.add(#page),
+					#forEles(#this+1)
+				) : 1 ],
+		#forPageer=:[ 
+			#this.maxPageNo>=#this.pageNo?(
+				#forEles(#this.firstNo),
+				#this.pageNo=#this.pageNo+1,
+				#forPageer(#this)
+			) : 1 ],
+		#forPageer(#forPageInfo),
+		#pageInfo.pageSize=#results.size(),
+		#pageInfo.totalSize=#pageInfo.pageSize,
+		#sysProps.remove("http.proxyHost"),
+		#sysProps.remove("http.proxyPort"),
+		#sysProps.remove("http.nonProxyHosts"),
+		@java.lang.System@out.println(#results.size()),
+'成功'+'[totalSize]=['+#results.size()+']'
