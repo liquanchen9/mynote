@@ -1,0 +1,64 @@
+		#rule = #params.rule,
+		#pageInfo = #params.pageInfo,
+		#searchengineConfig = #params.searchengineConfig,
+		
+		#dataServiceWsdlUrl = #params.wsdl,
+		#dataService = new cn.com.pengyue.vo.ws.WebService_Service(new java.net.URL(#dataServiceWsdlUrl),new javax.xml.namespace.QName("http://www.pengyue.com.cn/","WebService")).webServicePort,
+		
+
+#searchUrl='http://www.washingtonpost.com/pb/newssearch/?query='+@java.net.URLEncoder@encode(#rule.enRuleInclude.trim(),'utf-8')+'&contenttype=&searchType=&blogName=&datefilter=All+Since+2005&sort=Relevance&startat='+#pageInfo.firstNo,
+
+	#conn = @org.jsoup.Jsoup@connect(#searchUrl).maxBodySize(0).validateTLSCertificates(false),
+		#conn = #conn.timeout(#searchengineConfig.onceTimeOut),
+		#conn = #searchengineConfig.useProxy == 1 ? #conn.proxy(#searchengineConfig.proxyIp,#searchengineConfig.proxyPort) : #conn,
+		#doc = #conn.get(),
+
+#eles = #doc.select(' .pb-results-container .pb-feed-item '),
+#eleSize = #eles.size(),
+#results = new java.util.ArrayList(#eleSize),
+#dateFormat = new java.text.SimpleDateFormat("MMM dd,yyyy",@java.util.Locale@US),
+#forEles = :[#this < #eleSize ? (#ele=#eles.get(#this),
+		#page= new cn.com.pengyue.vo.ws.Page(),
+		#dateEle=#ele.select(' .pb-feed-byline .pb-timestamp'),
+		(#dateEle.size()>0
+				?(#dateEle=#dateEle.get(0),
+					#dateStr = #dateEle.text(),
+					(#dateStr.indexOf('ago')>0
+							?(#dateNum = @java.lang.Integer@valueOf(#dateStr.replaceAll('\\s+[a-zA-Z]+\\s+ago$','')),
+							#dateNum = 0 - #dateNum,
+							#dateStr = #dateNum>1 
+										? #dateStr.replaceAll('s\\s+ago$','') 
+										: #dateStr.replaceAll('\\s+ago$',''),
+							#dateStr = #dateStr.replaceAll('^\\d+\\s+',''),
+							#dateField = (#dateStr=='second'? 13:
+													 #dateStr=='minute'? 12: 
+													 #dateStr=='hour'? 10: 
+													 #dateStr=='day'? 5: 
+													 #dateStr=='week'? 3: 
+													 #dateStr=='month'? 2: 
+													 #dateStr=='year'? 1: 
+													 #dateStr=='decade'? (#dateNum = #dateNum*10 ,1)
+													 : 5 ),
+							#date = @java.util.Calendar@getInstance(),
+							#date.add(#dateField,#dateNum),
+							#page.infoPushDate = #date.getTime())
+							:(#page.infoPushDate = #dateFormat.parse(#dateStr))))
+					:(#page.infoPushDate=new java.util.Date())),
+					#page.title=#ele.select(' .pb-feed-headline a').get(0).text(),
+					#descEle=#ele.select(' .pb-feed-description'),
+					#page.contentDesc=#descEle.size()>0?#descEle.get(0).text():#page.title,
+					#page.url=#ele.select(' .pb-feed-headline a').get(0).attr('href'),
+					#page.url=#page.url.startsWith('/')?("http://www.washingtonpost.com"+#page.url):(#page.url),
+					#page.rule=#rule.rule,
+					#page.ruleId=#rule.id,
+					#page.searchengineId=#searchengineConfig.id,
+					#page.domainName='华盛顿邮报',
+					#page.domain='www.washingtonpost.com',
+					'下面这里是添加到数据库！',
+					#dataService.savePage(#page),
+					#results.add(#page),#forEles(#this+1)) : 1 ],
+#forEles(0),
+#pageInfo.pageSize=10,
+#totalEles = #doc.select(' .pb-f-newssearch-search-results .pb-filter-container .pb-search-number'),
+#pageInfo.totalSize= #totalEles.size()>0 ?( @Integer@valueOf(#totalEles.get(0).text().replaceAll('[\\(\\)]',''))):10,
+'成功解析到'+#results.size()+'条[totalSize]=['+#pageInfo.totalSize+']' 		  

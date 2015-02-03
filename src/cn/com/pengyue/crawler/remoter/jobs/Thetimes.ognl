@@ -1,0 +1,47 @@
+		#rule = #params.rule,
+		#pageInfo = #params.pageInfo,
+		#searchengineConfig = #params.searchengineConfig,
+		
+		#dataServiceWsdlUrl = #params.wsdl,
+		#dataService = new cn.com.pengyue.vo.ws.WebService_Service(new java.net.URL(#dataServiceWsdlUrl),new javax.xml.namespace.QName("http://www.pengyue.com.cn/","WebService")).webServicePort,
+		
+		#searchUrl='http://www.thetimes.co.uk/tto/public/sitesearch.do?querystring='+@java.net.URLEncoder@encode(#rule.enRuleInclude.trim(),'utf-8')+'&offset='+#pageInfo.firstNo+'&hits=0&bl=on',
+	
+	
+	#conn = @org.jsoup.Jsoup@connect(#searchUrl).maxBodySize(0).validateTLSCertificates(false),
+		#conn = #conn.timeout(#searchengineConfig.onceTimeOut),
+		#conn = #searchengineConfig.useProxy == 1 ? #conn.proxy(#searchengineConfig.proxyIp,#searchengineConfig.proxyPort) : #conn,
+		#doc = #conn.get(),
+
+
+#eles = #doc.select(' .content-box-margin .search-result'),
+#eleSize = #eles.size(),
+#results = new java.util.ArrayList(#eleSize),
+#dateFormat = new java.text.SimpleDateFormat("dd MMM yyyy",@java.util.Locale@US),
+#forEles = :[#this < #eleSize ? (#ele=#eles.get(#this),
+			#page= new cn.com.pengyue.vo.ws.Page(),
+			#dateEle=#ele.select(' .search-result-info li'),
+			(#dateEle.size()>1?(
+						#dateEle=#dateEle.get(1),
+						#dateStr = #dateEle.text(),
+						#dateStr = #dateStr.replaceAll('^Published:\\s+',''),
+						#page.infoPushDate = #dateFormat.parse(#dateStr))
+				:(#page.infoPushDate=new java.util.Date())),
+			#page.title=#ele.select(' h2 a').get(0).text(),
+			#page.contentDesc=#ele.select(' .text').get(0).text(),
+			#page.url=#ele.select('  h2 a').get(0).attr('href'),
+			#page.url=#page.url.startsWith('/')?("http://www.thetimes.co.uk"+#page.url):(#page.url),
+			#page.rule=#rule.enRuleInclude,
+			#page.ruleId=#rule.id,
+			#page.searchengineId=#searchengineConfig.id,
+			#page.domainName='̩泰晤士报',
+			#page.domain='www.thetimes.co.uk',
+			'下面这里是添加到数据库！',
+			#dataService.savePage(#page),
+			#results.add(#page),
+			#forEles(#this+1)) : 1 ],
+#forEles(0),
+#pageInfo.pageSize=25,
+#totalEles = #doc.select(' .search-listings-bar .search-results .bold'),
+#pageInfo.totalSize= #totalEles.size()>1 ?( @Integer@valueOf(#totalEles.get(1).text())):25,
+'成功解析到'+#results.size()+'条[totalSize]=['+#pageInfo.totalSize+']' 

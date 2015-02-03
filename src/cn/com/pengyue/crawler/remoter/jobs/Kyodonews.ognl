@@ -1,0 +1,45 @@
+		#rule = #params.rule,
+		#pageInfo = #params.pageInfo,
+		#searchengineConfig = #params.searchengineConfig,
+		
+		#dataServiceWsdlUrl = #params.wsdl,
+		#dataService = new cn.com.pengyue.vo.ws.WebService_Service(new java.net.URL(#dataServiceWsdlUrl),new javax.xml.namespace.QName("http://www.pengyue.com.cn/","WebService")).webServicePort,
+		
+		#keyword=@java.net.URLEncoder@encode(#rule.ruleInclude.trim(),'utf-8'),
+		#searchUrl='http://china.kyodonews.jp/search/?searchType=site&req_type=article&FromDate=&ToDate=&phrase='+#keyword+'&page='+#pageInfo.pageNo,
+		
+		#conn = @org.jsoup.Jsoup@connect(#searchUrl).maxBodySize(0).validateTLSCertificates(false),
+		#conn = #conn.timeout(#searchengineConfig.onceTimeOut),
+		#conn = #searchengineConfig.useProxy == 1 ? #conn.proxy(#searchengineConfig.proxyIp,#searchengineConfig.proxyPort) : #conn,
+		#doc = #conn.get(),
+		
+#eles = #doc.select('#articlesResults li dl'),
+#eleSize = #eles.size(),
+#results = new java.util.ArrayList(#eleSize),
+#dateFormat = new java.text.SimpleDateFormat("yyyy年MM月dd日"),#forEles = :[#this < #eleSize ? (
+		#ele=#eles.get(#this),
+		#page= new cn.com.pengyue.vo.ws.Page(),
+		#dateEle=#ele.select('.date'),
+		(#dateEle.size()>0?(
+			#dateEle=#dateEle.get(0),
+			#dateStr = #dateEle.text(),
+			#page.infoPushDate = #dateFormat.parse(#dateStr))
+		  :(#page.infoPushDate=new java.util.Date())),
+		 #page.title=#ele.select(' dt a').get(0).text(),
+		 #page.contentDesc=#page.title,
+		 #page.url=#ele.select(' dt a').get(0).attr('href'),
+		 #page.url=#page.url.startsWith('/')?("http://china.kyodonews.jp"+#page.url):(#page.url),
+		 #page.rule=#rule.ruleInclude,
+		 #page.ruleId=#rule.id,
+		 #page.searchengineId=#searchengineConfig.id,
+		 #page.domainName='共同网',
+		 #page.domain='china.kyodonews.jp',
+		 '下面这里是添加到数据库！',
+		 #dataService.savePage(#page),
+		 #results.add(#page),
+		 #forEles(#this+1)) : 1 ],
+#forEles(0),
+#pageInfo.pageSize=10,
+#totalEles = #doc.select(' #mainContentsBlock .h2style01 span'),
+#pageInfo.totalSize= #totalEles.size()>0 ?( @Integer@valueOf(#totalEles.text().replaceAll('^.*共','').replaceAll('条.*$',''))):10,
+'成功解析到'+#results.size()+'条[totalSize]=['+#pageInfo.totalSize+']'

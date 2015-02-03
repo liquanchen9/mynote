@@ -1,0 +1,7 @@
+#url =  #params.url,
+#config = #params.searchengineConfig,
+#pageId  = #params.pageId,
+#conn = @org.jsoup.Jsoup@connect(#url).timeout(#config.onceTimeOut).maxBodySize(0).validateTLSCertificates(false),
+#conn = #config.useProxy == 1 ? #conn.proxy(#config.proxyIp,#config.proxyPort) : #conn,
+#doc = #conn.execute().body(),
+'[pageId]=['+#pageId+']'+#doc
